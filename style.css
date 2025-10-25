@@ -187,3 +187,124 @@ body {
     color: var(--success-color);
     font-weight: 700;
 }
+/* =============================================== */
+/* == Gaya untuk Tampilan Seluler (Responsive) == */
+/* =============================================== */
+
+/* Tampilkan header mobile & sembunyikan di desktop */
+.mobile-header {
+    display: none; /* Sembunyi di desktop */
+    background-color: var(--bg-sidebar);
+    padding: 0.75rem 1rem;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid #3A3A3C;
+}
+.menu-button {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.75rem;
+    margin-right: 1rem;
+}
+.mobile-logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Overlay untuk latar belakang menu */
+#sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+}
+
+/* Terapkan gaya ini hanya untuk layar dengan lebar MAKSIMAL 768px */
+@media (max-width: 768px) {
+    /* Layout utama menjadi 1 kolom */
+    .app-container {
+        flex-direction: column;
+    }
+
+    /* Ubah sidebar menjadi menu off-canvas */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 260px; /* Lebar menu saat dibuka */
+        z-index: 1000;
+        transform: translateX(-100%); /* Sembunyikan di luar layar kiri */
+        transition: transform 0.3s ease-in-out;
+    }
+
+    /* Tampilkan sidebar saat body memiliki class 'sidebar-open' */
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+    
+    /* Tampilkan overlay saat menu dibuka */
+    body.sidebar-open #sidebar-overlay {
+        display: block;
+    }
+    
+    /* Sembunyikan logo di sidebar (karena sudah ada di header mobile) */
+    .sidebar .sidebar-header .logo {
+        display: none;
+    }
+
+    /* Tampilkan header mobile */
+    .mobile-header {
+        display: flex;
+    }
+
+    /* Konten utama sekarang memenuhi layar */
+    .main-content {
+        padding: 1rem; /* Kurangi padding di mobile */
+    }
+    .content-section {
+        margin-bottom: 2rem;
+    }
+
+    /* == Penyesuaian Ukuran Font & Elemen == */
+    
+    /* Kecilkan font judul */
+    .content-section h2 {
+        font-size: 1.1rem;
+    }
+
+    /* Ubah layout kartu layanan */
+    .service-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .service-action {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+    .service-card h5 {
+        font-size: 0.95rem;
+    }
+
+    /* Kecilkan font dan padding tabel */
+    .table-custom {
+        font-size: 0.875rem; /* Font lebih kecil */
+    }
+    .table-custom th, .table-custom td {
+        padding: 0.75rem; /* Padding lebih kecil */
+    }
+    
+    .otp-code {
+        font-size: 1rem;
+    }
+}
