@@ -9,9 +9,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ELEMEN BARU: HEADER UNTUK TAMPILAN MOBILE -->
+    <header class="mobile-header">
+        <button id="menu-toggle" class="menu-button">
+            <i class="bi bi-list"></i> <!-- Ikon hamburger, lebih umum dari titik tiga -->
+        </button>
+        <h1 class="mobile-logo">OTPGO</h1>
+    </header>
+
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
+        <!-- Sidebar sekarang memiliki class tambahan -->
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h1 class="logo">OTPGO</h1>
             </div>
@@ -28,8 +36,12 @@
             </div>
         </aside>
 
+        <!-- ELEMEN BARU: OVERLAY UNTUK MENU MOBILE -->
+        <div id="sidebar-overlay"></div>
+
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Konten utama tidak berubah -->
             <div class="content-section">
                 <h2>Layanan Verifikasi Facebook</h2>
                 <div class="service-card">
