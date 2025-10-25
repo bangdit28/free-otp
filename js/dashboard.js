@@ -19,6 +19,21 @@ const activeOrdersTbody = document.getElementById('active-orders-tbody');
 const logoutBtn = document.getElementById('logout-btn');
 const activeTimers = {};
 
+// ======================================================
+// BAGIAN BARU: LOGIKA UNTUK MENU MOBILE
+// ======================================================
+const menuToggle = document.getElementById('menu-toggle');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+menuToggle.addEventListener('click', () => {
+    document.body.classList.toggle('sidebar-open');
+});
+
+sidebarOverlay.addEventListener('click', () => {
+    document.body.classList.remove('sidebar-open');
+});
+
 let currentUserId = null;
 
 // ======================================================
