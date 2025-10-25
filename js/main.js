@@ -2,7 +2,7 @@
 // !! PENTING !! GANTI DENGAN KONFIGURASI FIREBASE ANDA
 // ======================================================
 const firebaseConfig = {
-    apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
+      apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
   databaseURL: "https://freeotp-f99d4-default-rtdb.firebaseio.com",
   projectId: "freeotp-f99d4",
@@ -22,7 +22,7 @@ const activeTimers = {}; // Objek untuk menyimpan interval timer
 
 // --- Fungsi ---
 function generateUniqueId() {
-    return Date.now().toString(36);
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
 function formatTime(seconds) {
@@ -30,6 +30,20 @@ function formatTime(seconds) {
     const sec = seconds % 60;
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 }
+
+// Fungsi untuk menyalin teks ke clipboard
+function copyToClipboard(text, element) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalIcon = element.className;
+        element.className = 'bi bi-check-lg text-success'; // Ganti ikon menjadi centang
+        setTimeout(() => {
+            element.className = originalIcon; // Kembalikan ikon setelah 1.5 detik
+        }, 1500);
+    }).catch(err => {
+        console.error('Gagal menyalin: ', err);
+    });
+}
+
 
 function startTimer(orderId, remainingSeconds) {
     if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
@@ -39,32 +53,27 @@ function startTimer(orderId, remainingSeconds) {
 
     let seconds = remainingSeconds;
     activeTimers[orderId] = setInterval(() => {
-        seconds--;
-        if (seconds >= 0) {
+        if (seconds > 0) {
+            seconds--;
             timerCell.textContent = formatTime(seconds);
         } else {
             clearInterval(activeTimers[orderId]);
             timerCell.textContent = "Expired";
-            // Opsional: Update status di Firebase
-            database.ref('orders/'' + orderId).update({ status: 'expired' });
+            database.ref('orders/' + orderId).update({ status: 'expired' });
         }
     }, 1000);
 }
 
 function addOrderToTable(orderId, orderData) {
-    if (document.getElementById(`order-${orderId}`)) return; // Jangan tambahkan jika sudah ada
+    if (document.getElementById(`order-${orderId}`)) return; 
 
     const row = document.createElement('tr');
     row.id = `order-${orderId}`;
     
-    // Tentukan status awal
-    const phone = orderData.phoneNumber || 'Menunggu nomor...';
-    const otp = orderData.otpCode ? `<span class="otp-code">${orderData.otpCode}</span>` : '<div class="spinner-border spinner-border-sm"></div>';
-    
     row.innerHTML = `
         <td>${orderData.serviceName}</td>
-        <td class="phone-cell">${phone}</td>
-        <td class="otp-cell">${otp}</td>
+        <td class="phone-cell"><div class="spinner-border spinner-border-sm" role="status"></div> Mencari...</td>
+        <td class="otp-cell"><div class="spinner-border spinner-border-sm"></div></td>
         <td class="timer-cell">10:00</td>
         <td class="status-cell"><i class="bi bi-hourglass-split"></i></td>
     `;
@@ -73,6 +82,9 @@ function addOrderToTable(orderId, orderData) {
     listenToOrderUpdates(orderId);
 }
 
+// ======================================================
+// INI BAGIAN UTAMA YANG DIPERBARUI
+// ======================================================
 function listenToOrderUpdates(orderId) {
     const orderRef = database.ref('orders/' + orderId);
     
@@ -87,60 +99,64 @@ function listenToOrderUpdates(orderId) {
         const row = document.getElementById(`order-${orderId}`);
         if (!row) return;
 
-        // Update Nomor Telepon
+        // --- Cek Status Pesanan Secara Menyeluruh ---
+        
+        // 1. Tangani Status Nomor Telepon
         const phoneCell = row.querySelector('.phone-cell');
-        if (data.phoneNumber && phoneCell.innerHTML.includes('Menunggu')) {
-            phoneCell.innerHTML = `${data.phoneNumber} <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.phoneNumber}')"></i>`;
+        if (data.status === 'out_of_stock') {
+            phoneCell.innerHTML = `<span class="text-danger fw-bold">Stok Habis</span>`;
+            if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
+            row.querySelector('.timer-cell').textContent = "Gagal";
+            row.querySelector('.status-cell').innerHTML = `<i class="bi bi-x-circle-fill text-danger"></i>`;
+            row.querySelector('.otp-cell').textContent = "-";
+            orderRef.off(); // Berhenti mendengarkan karena pesanan gagal
+            return; // Hentikan proses lebih lanjut untuk order ini
+        } else if (data.phoneNumber) {
+             if (!phoneCell.innerHTML.includes('copy-icon')) { // Cek agar tidak render ulang
+                phoneCell.innerHTML = `${data.phoneNumber} <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.phoneNumber}', this)"></i>`;
+             }
         }
         
-        // Update Kode OTP
+        // 2. Tangani Status Kode OTP
         const otpCell = row.querySelector('.otp-cell');
         if (data.otpCode) {
-            otpCell.innerHTML = `<span class="otp-code">${data.otpCode}</span> <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.otpCode}')"></i>`;
+            otpCell.innerHTML = `<span class="otp-code">${data.otpCode}</span> <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.otpCode}', this)"></i>`;
             row.querySelector('.status-cell').innerHTML = `<i class="bi bi-check-circle-fill text-success"></i>`;
             
-            // Hentikan timer & listener
+            // Hentikan timer & listener karena sudah selesai
             if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
             orderRef.off();
-        } else {
-            // Jalankan timer jika belum berjalan
-            const timeElapsed = (Date.now() - data.createdAt) / 1000;
+        } else if(data.phoneNumber && !activeTimers[orderId]) {
+            // Hanya jalankan timer JIKA nomor sudah diterima dan timer belum jalan
+            const createdAt = data.createdAt || Date.now();
+            const timeElapsed = (Date.now() - createdAt) / 1000;
             const remainingSeconds = Math.round(600 - timeElapsed);
-            if (!activeTimers[orderId] && remainingSeconds > 0) {
+            if (remainingSeconds > 0) {
                  startTimer(orderId, remainingSeconds);
+            } else {
+                 row.querySelector('.timer-cell').textContent = "Expired";
             }
         }
-    });
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert('Teks disalin!');
     });
 }
 
 // --- Event Listener ---
 getOrderBtn.addEventListener('click', () => {
     const orderId = generateUniqueId();
-    const serviceName = 'Facebook'; // Ambil dari data-attribute jika ada banyak layanan
+    const serviceName = 'Facebook'; 
 
     const newOrderData = {
         serviceName: serviceName,
         price: 1500,
-        status: 'waiting_number',
+        status: 'waiting_number', // Status awal yang akan dideteksi oleh admin.js
         phoneNumber: '',
         otpCode: '',
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
 
-    // Tulis ke Firebase
     database.ref('orders/' + orderId).set(newOrderData)
         .then(() => {
-            console.log(`Pesanan ${orderId} berhasil dibuat.`);
-            // Buat baris placeholder sementara sebelum data Firebase kembali
-            const placeholderData = { serviceName, createdAt: Date.now() };
-            addOrderToTable(orderId, placeholderData);
+            addOrderToTable(orderId, newOrderData);
         })
         .catch(err => console.error("Gagal membuat pesanan:", err));
-
 });
