@@ -19,12 +19,39 @@ const numberStockRef = database.ref('number_stock');
 const addStockBtn = document.getElementById('add-stock-btn');
 const numberTextarea = document.getElementById('number-textarea');
 const serviceSelect = document.getElementById('service-select');
-const countrySelect = document.getElementById('country-select'); // ELEMEN BARU
+const countrySelect = document.getElementById('country-select');
 const stockCountDisplay = document.getElementById('stock-count-display');
 const feedbackMessage = document.getElementById('feedback-message');
 
+
 // ======================================================
-// BAGIAN 1: MANAJEMEN STOK (DIPERBARUI)
+// FUNGSI UNTUK MEMUAT NEGARA DARI FIREBASE
+// ======================================================
+function loadCountries() {
+    const countriesRef = database.ref('config/countries');
+    countriesRef.once('value', (snapshot) => {
+        const countries = snapshot.val();
+        if (countries) {
+            countrySelect.innerHTML = ''; // Kosongkan daftar yang ada
+            for (const key in countries) {
+                const option = document.createElement('option');
+                option.value = key; // contoh: "indonesia"
+                option.textContent = countries[key]; // contoh: "Indonesia"
+                countrySelect.appendChild(option);
+            }
+            // Setelah negara dimuat, panggil updateStockCount untuk pertama kali
+            updateStockCount();
+        } else {
+            countrySelect.innerHTML = '<option>Konfigurasi negara!</option>';
+        }
+    });
+}
+// Panggil fungsi ini saat halaman admin dimuat
+loadCountries();
+
+
+// ======================================================
+// BAGIAN 1: MANAJEMEN STOK
 // ======================================================
 function showFeedback(message, isError = false) {
     feedbackMessage.textContent = message;
@@ -35,6 +62,10 @@ function showFeedback(message, isError = false) {
 addStockBtn.addEventListener('click', () => {
     const service = serviceSelect.value;
     const country = countrySelect.value;
+    if (!country) {
+        showFeedback("Daftar negara belum terisi atau belum dipilih.", true);
+        return;
+    }
     const numbersRaw = numberTextarea.value.trim();
     if (!numbersRaw) { showFeedback('Kolom nomor tidak boleh kosong.', true); return; }
     const numbers = numbersRaw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
@@ -64,18 +95,19 @@ addStockBtn.addEventListener('click', () => {
 function updateStockCount() {
     const service = serviceSelect.value;
     const country = countrySelect.value;
+    if (!service || !country) return;
+
     const stockPath = numberStockRef.child(service).child(country);
-    
     stockPath.orderByChild('status').equalTo('available').on('value', (snapshot) => {
         stockCountDisplay.textContent = `${snapshot.numChildren()} nomor`;
     });
 }
 serviceSelect.addEventListener('change', updateStockCount);
 countrySelect.addEventListener('change', updateStockCount);
-updateStockCount();
+
 
 // ======================================================
-// BAGIAN 2: MANAJEMEN PESANAN (DIPERBARUI)
+// BAGIAN 2: MANAJEMEN PESANAN
 // ======================================================
 
 function assignNumberToOrder(userId, orderId, service, country) {
