@@ -2,13 +2,13 @@
 // !! PENTING !! GANTI DENGAN KONFIGURASI FIREBASE ANDA
 // ======================================================
 const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "your-project-id.firebaseapp.com",
-  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+  apiKey: "AIzaSyA1zcoV_V33awRZXxhwK8-4m1_qrfMGL_U",
+  authDomain: "jasa-otp-56b5d.firebaseapp.com",
+  databaseURL: "https://jasa-otp-56b5d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "jasa-otp-56b5d",
+  storageBucket: "jasa-otp-56b5d.firebasestorage.app",
+  messagingSenderId: "807138993237",
+  appId: "1:807138993237:web:2ff9266337570e4dad20dc"
 };
 
 // Inisialisasi Firebase
