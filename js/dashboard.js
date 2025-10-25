@@ -17,10 +17,11 @@ const database = firebase.database();
 const getOrderBtn = document.getElementById('getOrderBtn');
 const activeOrdersTbody = document.getElementById('active-orders-tbody');
 const logoutBtn = document.getElementById('logout-btn');
+const countrySelect = document.getElementById('country-select'); // ELEMEN BARU
 const activeTimers = {};
 
 // ======================================================
-// BAGIAN BARU: LOGIKA UNTUK MENU MOBILE
+// LOGIKA UNTUK MENU MOBILE
 // ======================================================
 const menuToggle = document.getElementById('menu-toggle');
 const sidebar = document.getElementById('sidebar');
@@ -34,20 +35,17 @@ sidebarOverlay.addEventListener('click', () => {
     document.body.classList.remove('sidebar-open');
 });
 
-let currentUserId = null;
-
 // ======================================================
 // BAGIAN 1: AUTHENTICATION GUARD & SETUP
 // ======================================================
+let currentUserId = null;
 
 auth.onAuthStateChanged(user => {
     if (user) {
-        // Pengguna sudah login, simpan UID dan muat datanya
         currentUserId = user.uid;
         loadUserOrders();
     } else {
-        // Pengguna tidak login, tendang kembali ke halaman login
-        window.location.href = 'index.html';
+        window.location.href = 'index.html'; // atau login.html
     }
 });
 
@@ -56,25 +54,21 @@ logoutBtn.addEventListener('click', () => {
 });
 
 // ======================================================
-// BAGIAN 2: LOGIKA UTAMA (PERSISTENCE & REAL-TIME)
+// BAGIAN 2: LOGIKA UTAMA (DIPERBARUI)
 // ======================================================
 
 function loadUserOrders() {
     if (!currentUserId) return;
     const userOrdersRef = database.ref(`orders/${currentUserId}`);
 
-    // Listener ini akan memuat semua pesanan awal & pesanan baru
     userOrdersRef.on('child_added', (snapshot) => {
         const orderId = snapshot.key;
         const orderData = snapshot.val();
-        
-        // Hanya tampilkan yang belum selesai atau kedaluwarsa
         if (orderData.status !== 'finished_by_user') {
             addOrUpdateOrderRow(orderId, orderData);
         }
     });
     
-    // Listener ini akan menangani update pada pesanan yang sudah ada
     userOrdersRef.on('child_changed', (snapshot) => {
         const orderId = snapshot.key;
         const orderData = snapshot.val();
@@ -86,24 +80,21 @@ function loadUserOrders() {
         }
     });
 
-    // Listener ini menangani jika pesanan dihapus dari database
-     userOrdersRef.on('child_removed', (snapshot) => {
+    userOrdersRef.on('child_removed', (snapshot) => {
         const orderId = snapshot.key;
         const row = document.getElementById(`order-${orderId}`);
         if (row) row.remove();
     });
 }
 
-
 function addOrUpdateOrderRow(orderId, data) {
     let row = document.getElementById(`order-${orderId}`);
-    if (!row) { // Jika baris belum ada, buat baru
+    if (!row) {
         row = document.createElement('tr');
         row.id = `order-${orderId}`;
         activeOrdersTbody.prepend(row);
     }
     
-    // --- Nomor Telepon ---
     let phoneHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
     if (data.status === 'out_of_stock') {
         phoneHTML = `<span class="text-danger fw-bold">Stok Habis</span>`;
@@ -111,10 +102,8 @@ function addOrUpdateOrderRow(orderId, data) {
         phoneHTML = `${data.phoneNumber} <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.phoneNumber}', this)"></i>`;
     }
 
-    // --- Kode OTP ---
     let otpHTML = data.otpCode ? `<span class="otp-code">${data.otpCode}</span> <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.otpCode}', this)"></i>` : '<div class="spinner-border spinner-border-sm"></div>';
-
-    // --- Aksi / Status ---
+    
     let actionHTML = `<i class="bi bi-hourglass-split"></i>`;
     if (data.otpCode) {
         actionHTML = `<button class="btn btn-sm btn-success action-btn" onclick="finishOrder('${orderId}')"><i class="bi bi-check-lg"></i> Selesai</button>`;
@@ -131,7 +120,6 @@ function addOrUpdateOrderRow(orderId, data) {
         <td class="status-cell">${actionHTML}</td>
     `;
 
-    // --- Logika Timer ---
     const createdAt = data.createdAt || Date.now();
     const timeElapsed = (Date.now() - createdAt) / 1000;
     const remainingSeconds = Math.round(600 - timeElapsed);
@@ -141,13 +129,8 @@ function addOrUpdateOrderRow(orderId, data) {
     } else {
         const timerCell = row.querySelector('.timer-cell');
         timerCell.textContent = "Expired";
-        // Hapus otomatis jika sudah expired dan belum selesai
-        if(data.status !== 'finished_by_user') {
-             setTimeout(() => {
-                if(document.getElementById(`order-${orderId}`)){
-                    document.getElementById(`order-${orderId}`).remove();
-                }
-            }, 3000); // Hapus setelah 3 detik
+        if (data.status !== 'finished_by_user') {
+             setTimeout(() => { if (document.getElementById(`order-${orderId}`)) { document.getElementById(`order-${orderId}`).remove(); } }, 3000);
         }
     }
 }
@@ -156,33 +139,34 @@ getOrderBtn.addEventListener('click', () => {
     if (!currentUserId) return;
 
     const orderId = database.ref().child('orders').push().key;
-    const serviceName = 'Facebook'; 
+    const serviceName = 'Facebook';
+    const selectedCountry = countrySelect.value;
+
     const newOrderData = {
-        serviceName,
+        serviceName: serviceName,
         price: 1500,
         status: 'waiting_number',
         phoneNumber: '',
         otpCode: '',
+        country: selectedCountry,
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
 
     database.ref(`orders/${currentUserId}/${orderId}`).set(newOrderData);
 });
 
-// Fungsi finishOrder (dipanggil dari tombol "Selesai")
 function finishOrder(orderId) {
     if (!currentUserId) return;
-    // Ubah status di Firebase, listener 'child_changed' akan menghapus barisnya dari UI
     database.ref(`orders/${currentUserId}/${orderId}`).update({ status: 'finished_by_user' });
 }
 
 // ======================================================
-// BAGIAN 3: FUNGSI UTILITAS (TIMER, COPY)
+// BAGIAN 3: FUNGSI UTILITAS
 // ======================================================
 function startTimer(orderId, seconds) {
     if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
     const timerCell = document.querySelector(`#order-${orderId} .timer-cell`);
-    if(!timerCell) return;
+    if (!timerCell) return;
     
     let remaining = seconds;
     timerCell.textContent = formatTime(remaining);
@@ -193,11 +177,7 @@ function startTimer(orderId, seconds) {
         if (remaining <= 0) {
             clearInterval(activeTimers[orderId]);
             timerCell.textContent = "Expired";
-            // Hapus otomatis setelah 3 detik
-            setTimeout(() => {
-                const row = document.getElementById(`order-${orderId}`);
-                if (row) row.remove();
-            }, 3000);
+            setTimeout(() => { const row = document.getElementById(`order-${orderId}`); if (row) row.remove(); }, 3000);
         }
     }, 1000);
 }
