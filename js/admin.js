@@ -19,24 +19,67 @@ const numberStockRef = database.ref('number_stock');
 const addStockBtn = document.getElementById('add-stock-btn');
 const numberTextarea = document.getElementById('number-textarea');
 const serviceSelect = document.getElementById('service-select');
+const countrySelect = document.getElementById('country-select'); // ELEMEN BARU
 const stockCountDisplay = document.getElementById('stock-count-display');
 const feedbackMessage = document.getElementById('feedback-message');
 
 // ======================================================
-// BAGIAN 1: MANAJEMEN STOK (TIDAK BERUBAH)
+// BAGIAN 1: MANAJEMEN STOK (DIPERBARUI)
 // ======================================================
-function showFeedback(message, isError = false) { /* ... (Kode sama persis seperti sebelumnya) ... */ }
-addStockBtn.addEventListener('click', () => { /* ... (Kode sama persis seperti sebelumnya) ... */ });
-numberStockRef.child('facebook_indonesia').orderByChild('status').equalTo('available').on('value', (snapshot) => { stockCountDisplay.textContent = snapshot.numChildren(); });
-// (Pastikan Anda menyalin-tempel kode lengkap untuk fungsi-fungsi di atas dari file Anda sebelumnya)
+function showFeedback(message, isError = false) {
+    feedbackMessage.textContent = message;
+    feedbackMessage.className = isError ? 'mt-2 text-danger' : 'mt-2 text-success';
+    setTimeout(() => feedbackMessage.textContent = '', 4000);
+}
 
+addStockBtn.addEventListener('click', () => {
+    const service = serviceSelect.value;
+    const country = countrySelect.value;
+    const numbersRaw = numberTextarea.value.trim();
+    if (!numbersRaw) { showFeedback('Kolom nomor tidak boleh kosong.', true); return; }
+    const numbers = numbersRaw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+    if (numbers.length > 100) { showFeedback('Maksimal 100 nomor sekali tambah.', true); return; }
+    
+    addStockBtn.disabled = true;
+    addStockBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menambahkan...';
+    
+    const stockPath = numberStockRef.child(service).child(country);
+    let successCount = 0;
+    const totalNumbers = numbers.length;
+    
+    numbers.forEach(number => {
+        const newStockEntry = { number: number, status: 'available', addedAt: firebase.database.ServerValue.TIMESTAMP };
+        stockPath.push(newStockEntry, (error) => {
+            if (!error) successCount++;
+            if (successCount === totalNumbers) {
+                 showFeedback(`Berhasil menambahkan ${successCount} nomor baru.`);
+                 numberTextarea.value = '';
+                 addStockBtn.disabled = false;
+                 addStockBtn.innerHTML = 'Tambah';
+            }
+        });
+    });
+});
+
+function updateStockCount() {
+    const service = serviceSelect.value;
+    const country = countrySelect.value;
+    const stockPath = numberStockRef.child(service).child(country);
+    
+    stockPath.orderByChild('status').equalTo('available').on('value', (snapshot) => {
+        stockCountDisplay.textContent = `${snapshot.numChildren()} nomor`;
+    });
+}
+serviceSelect.addEventListener('change', updateStockCount);
+countrySelect.addEventListener('change', updateStockCount);
+updateStockCount();
 
 // ======================================================
-// BAGIAN 2: MANAJEMEN PESANAN (LOGIKA BARU YANG SUDAH DIPERBAIKI)
+// BAGIAN 2: MANAJEMEN PESANAN (DIPERBARUI)
 // ======================================================
 
-function assignNumberToOrder(userId, orderId, service) {
-    const stockRef = numberStockRef.child(service);
+function assignNumberToOrder(userId, orderId, service, country) {
+    const stockRef = numberStockRef.child(service).child(country);
     stockRef.orderByChild('status').equalTo('available').limitToFirst(1).once('value', (snapshot) => {
         if (snapshot.exists()) {
             const stockId = Object.keys(snapshot.val())[0];
@@ -76,24 +119,20 @@ function checkAndSetPlaceholder() {
     }
 }
 
-// ---- FUNGSI UTAMA UNTUK MEMASANG LISTENER ----
 function attachListenersToUser(userId) {
     const userOrdersRef = database.ref(`orders/${userId}`);
 
-    // Listener untuk PESANAN BARU dari pengguna ini
     userOrdersRef.on('child_added', (orderSnapshot) => {
         const orderId = orderSnapshot.key;
         const order = orderSnapshot.val();
 
-        // Filter di sini: Hanya proses jika statusnya menunggu & belum ada di tabel
         if (order.status === 'waiting_number' && !document.getElementById(`order-${orderId}`)) {
             checkAndSetPlaceholder();
-            
             const row = document.createElement('tr');
             row.id = `order-${orderId}`;
             row.innerHTML = `
                 <td>${orderId.substring(0, 8)}...</td>
-                <td>${order.serviceName}</td>
+                <td>${order.serviceName} (${order.country})</td>
                 <td class="phone-cell"><span class="text-warning">Mencari...</span></td>
                 <td><input type="text" class="form-control otp-input" placeholder="Masukkan OTP"></td>
                 <td>
@@ -101,11 +140,10 @@ function attachListenersToUser(userId) {
                 </td>
             `;
             tableBody.appendChild(row);
-            assignNumberToOrder(userId, orderId, 'facebook_indonesia');
+            assignNumberToOrder(userId, orderId, order.serviceName.toLowerCase(), order.country);
         }
     });
 
-    // Listener untuk PERUBAHAN pada pesanan yang sudah ada
     userOrdersRef.on('child_changed', (orderSnapshot) => {
         const orderId = orderSnapshot.key;
         const order = orderSnapshot.val();
@@ -128,14 +166,11 @@ function attachListenersToUser(userId) {
     });
 }
 
-// ---- TITIK MASUK UTAMA ----
-// 1. Listen untuk setiap user yang ADA atau BARU ditambahkan
 ordersRef.on('child_added', (userSnapshot) => {
     const userId = userSnapshot.key;
-    attachListenersToUser(userId); // Pasang listener lengkap untuk user tersebut
+    attachListenersToUser(userId);
 });
 
-// Pengecekan awal saat halaman dimuat
 ordersRef.once('value', (snapshot) => {
     if (!snapshot.exists()) {
         checkAndSetPlaceholder();
