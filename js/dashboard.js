@@ -1,4 +1,3 @@
-// Ganti dengan konfigurasi Firebase Anda
 const firebaseConfig = {
       apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
@@ -17,44 +16,59 @@ const database = firebase.database();
 const getOrderBtn = document.getElementById('getOrderBtn');
 const activeOrdersTbody = document.getElementById('active-orders-tbody');
 const logoutBtn = document.getElementById('logout-btn');
-const countrySelect = document.getElementById('country-select'); // ELEMEN BARU
+const countrySelect = document.getElementById('country-select');
 const activeTimers = {};
 
-// ======================================================
-// LOGIKA UNTUK MENU MOBILE
-// ======================================================
+// --- Logika Menu Mobile ---
 const menuToggle = document.getElementById('menu-toggle');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
+menuToggle.addEventListener('click', () => { document.body.classList.toggle('sidebar-open'); });
+sidebarOverlay.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); });
 
-menuToggle.addEventListener('click', () => {
-    document.body.classList.toggle('sidebar-open');
-});
 
-sidebarOverlay.addEventListener('click', () => {
-    document.body.classList.remove('sidebar-open');
-});
+// ======================================================
+// FUNGSI UNTUK MEMUAT NEGARA DARI FIREBASE
+// ======================================================
+function loadCountries() {
+    const countriesRef = database.ref('config/countries');
+    countriesRef.once('value', (snapshot) => {
+        const countries = snapshot.val();
+        if (countries) {
+            countrySelect.innerHTML = ''; // Kosongkan daftar yang ada
+            for (const key in countries) {
+                const option = document.createElement('option');
+                option.value = key; // contoh: "indonesia"
+                option.textContent = countries[key]; // contoh: "Indonesia"
+                countrySelect.appendChild(option);
+            }
+        } else {
+            // Beri tahu pengguna jika tidak ada negara yang dikonfigurasi
+            countrySelect.innerHTML = '<option>Tidak ada negara</option>';
+            getOrderBtn.disabled = true;
+        }
+    });
+}
+
 
 // ======================================================
 // BAGIAN 1: AUTHENTICATION GUARD & SETUP
 // ======================================================
 let currentUserId = null;
-
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUserId = user.uid;
         loadUserOrders();
+        loadCountries(); // Panggil fungsi untuk memuat negara saat user login
     } else {
-        window.location.href = 'index.html'; // atau login.html
+        window.location.href = 'index.html';
     }
 });
+logoutBtn.addEventListener('click', () => { auth.signOut(); });
 
-logoutBtn.addEventListener('click', () => {
-    auth.signOut();
-});
 
 // ======================================================
-// BAGIAN 2: LOGIKA UTAMA (DIPERBARUI)
+// BAGIAN 2: LOGIKA UTAMA
 // ======================================================
 
 function loadUserOrders() {
@@ -136,7 +150,7 @@ function addOrUpdateOrderRow(orderId, data) {
 }
 
 getOrderBtn.addEventListener('click', () => {
-    if (!currentUserId) return;
+    if (!currentUserId || !countrySelect.value) return;
 
     const orderId = database.ref().child('orders').push().key;
     const serviceName = 'Facebook';
