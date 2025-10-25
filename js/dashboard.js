@@ -32,7 +32,7 @@ auth.onAuthStateChanged(user => {
         loadUserOrders();
     } else {
         // Pengguna tidak login, tendang kembali ke halaman login
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
     }
 });
 
