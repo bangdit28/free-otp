@@ -2,13 +2,13 @@
 // !! PENTING !! GANTI DENGAN KONFIGURASI FIREBASE ANDA
 // ======================================================
 const firebaseConfig = {
-    apiKey: "AIza...",
-    authDomain: "your-project-id.firebaseapp.com",
-    databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
+    apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
+  authDomain: "freeotp-f99d4.firebaseapp.com",
+  databaseURL: "https://freeotp-f99d4-default-rtdb.firebaseio.com",
+  projectId: "freeotp-f99d4",
+  storageBucket: "freeotp-f99d4.firebasestorage.app",
+  messagingSenderId: "236669593071",
+  appId: "1:236669593071:web:fe780ee2580df4aeea021a"
 };
 
 // Inisialisasi Firebase
@@ -142,4 +142,5 @@ getOrderBtn.addEventListener('click', () => {
             addOrderToTable(orderId, placeholderData);
         })
         .catch(err => console.error("Gagal membuat pesanan:", err));
+
 });
