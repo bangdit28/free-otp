@@ -1,3 +1,4 @@
+// Ganti dengan konfigurasi Firebase Anda
 const firebaseConfig = {
       apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
@@ -10,6 +11,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const database = firebase.database(); // Tambahkan referensi database
 
 // DOM Elements
 const emailInput = document.getElementById('email');
@@ -57,7 +59,13 @@ registerBtn.addEventListener('click', () => {
     }
     auth.createUserWithEmailAndPassword(email, password)
         .then(userCredential => {
-            // Registrasi berhasil, onAuthStateChanged akan handle redirect
+            const user = userCredential.user;
+            // BARU: Buat profil pengguna di database dengan saldo awal
+            database.ref('users/' + user.uid).set({
+                email: user.email,
+                balance: 0 // Saldo awal
+            });
+            // onAuthStateChanged akan handle redirect
         })
         .catch(error => {
             showAlert(error.message);
