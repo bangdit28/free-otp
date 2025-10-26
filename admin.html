@@ -17,10 +17,42 @@
     <main class="container mt-4">
         <!-- Panel Manajemen Stok -->
         <div class="card bg-dark border-secondary mb-4">
-            <!-- ... (Isi card Manajemen Stok tidak berubah) ... -->
+            <div class="card-header">
+                <h4 class="mb-0">Manajemen Stok Nomor</h4>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label for="service-select" class="form-label">Layanan</label>
+                        <select id="service-select" class="form-select">
+                            <option value="facebook">Facebook</option>
+                            <option value="google">Google</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="country-select" class="form-label">Negara</label>
+                        <select id="country-select" class="form-select">
+                            <!-- Opsi akan diisi oleh JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="number-textarea" class="form-label">Daftar Nomor (satu per baris)</label>
+                        <textarea id="number-textarea" class="form-control" rows="4" placeholder="62812...&#10;6012..."></textarea>
+                    </div>
+                    <div class="col-md-2">
+                        <button id="add-stock-btn" class="btn btn-primary w-100">Tambah</button>
+                    </div>
+                </div>
+                <hr class="my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>Stok Tersedia:</strong>
+                    <span id="stock-count-display" class="badge bg-success fs-6">Pilih layanan & negara</span>
+                </div>
+                 <div id="feedback-message" class="mt-2"></div>
+            </div>
         </div>
 
-        <!-- PANEL BARU: PERMINTAAN DEPOSIT -->
+        <!-- Panel Permintaan Deposit -->
         <div class="card bg-dark border-secondary mb-4">
             <div class="card-header">
                 <h4 class="mb-0">Permintaan Deposit Tertunda</h4>
