@@ -21,34 +21,59 @@
                 <h4 class="mb-0">Manajemen Stok Nomor</h4>
             </div>
             <div class="card-body">
-                <div class="row align-items-end">
-                    <div class="col-md-3">
+                <div class="row align-items-end gy-3">
+                    <div class="col-md-2">
                         <label for="service-select" class="form-label">Layanan</label>
                         <select id="service-select" class="form-select">
                             <option value="facebook">Facebook</option>
                             <option value="google">Google</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="country-select" class="form-label">Negara</label>
-                        <select id="country-select" class="form-select">
-                            <!-- Opsi akan diisi oleh JavaScript -->
-                        </select>
+                        <select id="country-select" class="form-select"></select>
                     </div>
-                    <div class="col-md-4">
-                        <label for="number-textarea" class="form-label">Daftar Nomor (satu per baris)</label>
-                        <textarea id="number-textarea" class="form-control" rows="4" placeholder="62812...&#10;6012..."></textarea>
+                    <div class="col-md-3">
+                        <label for="range-name-input" class="form-label">Nama Range</label>
+                        <input type="text" id="range-name-input" class="form-control" placeholder="Contoh: ETHIOPIA 1621">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="number-textarea" class="form-label">Daftar Nomor</label>
+                        <textarea id="number-textarea" class="form-control" rows="3" placeholder="Satu nomor per baris..."></textarea>
                     </div>
                     <div class="col-md-2">
                         <button id="add-stock-btn" class="btn btn-primary w-100">Tambah</button>
                     </div>
                 </div>
                 <hr class="my-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <strong>Stok Tersedia:</strong>
-                    <span id="stock-count-display" class="badge bg-success fs-6">Pilih layanan & negara</span>
+                <div id="feedback-message" class="mb-2"></div>
+                <strong>Total Stok Tersedia:</strong>
+                <span id="stock-count-display" class="badge bg-success fs-6">Pilih layanan & negara</span>
+            </div>
+        </div>
+
+        <!-- Panel Daftar Range Aktif -->
+        <div class="card bg-dark border-secondary mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Daftar Range Aktif</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Hanya nomor dengan status "tersedia" dari sebuah range yang akan dihapus.</p>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nama Range</th>
+                                <th>Tersedia</th>
+                                <th>Total</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="range-list-tbody">
+                            <!-- Daftar range akan dimuat oleh JS -->
+                        </tbody>
+                    </table>
                 </div>
-                 <div id="feedback-message" class="mt-2"></div>
             </div>
         </div>
 
