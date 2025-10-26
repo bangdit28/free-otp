@@ -308,3 +308,13 @@ body {
         font-size: 1rem;
     }
 }
+/* Style untuk Tombol Batal */
+.btn-cancel {
+    background-color: #dc3545; /* Merah Bootstrap */
+    color: white;
+    border: none;
+}
+
+.btn-cancel:hover {
+    background-color: #bb2d3b;
+}
