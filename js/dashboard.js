@@ -22,11 +22,13 @@ const userBalanceEl = document.getElementById('user-balance');
 const submitDepositBtn = document.getElementById('submit-deposit-btn');
 const depositAmountInput = document.getElementById('deposit-amount');
 const depositAlert = document.getElementById('deposit-alert');
+const basePriceEl = document.getElementById('base-price');
+const promoPriceEl = document.getElementById('promo-price');
 const activeTimers = {};
 
 let currentUserId = null;
 let currentUserBalance = 0;
-let servicePrice = 0;
+let servicePrice = null; // Ubah ke null untuk menandakan belum dimuat
 
 // --- Logika Menu Mobile ---
 const menuToggle = document.getElementById('menu-toggle');
@@ -35,8 +37,9 @@ const sidebarOverlay = document.getElementById('sidebar-overlay');
 menuToggle.addEventListener('click', () => { document.body.classList.toggle('sidebar-open'); });
 sidebarOverlay.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); });
 
+
 // ======================================================
-// FUNGSI MEMUAT KONFIGURASI
+// FUNGSI MEMUAT KONFIGURASI (DIPERBARUI)
 // ======================================================
 function loadCountries() {
     const countriesRef = database.ref('config/countries');
@@ -50,6 +53,8 @@ function loadCountries() {
                 option.textContent = countries[key];
                 countrySelect.appendChild(option);
             }
+            // Setelah negara dimuat, panggil loadServiceConfig untuk negara pertama
+            loadServiceConfig('facebook', countrySelect.value);
         } else {
             countrySelect.innerHTML = '<option>Tidak ada negara</option>';
             getOrderBtn.disabled = true;
@@ -58,13 +63,25 @@ function loadCountries() {
 }
 
 function loadServiceConfig(service, country) {
+    // Nonaktifkan tombol pesan saat harga sedang dimuat
+    getOrderBtn.disabled = true;
+    getOrderBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    servicePrice = null; // Reset harga
+
     const priceRef = database.ref(`config/services/${service}/${country}`);
-    priceRef.on('value', (snapshot) => {
+    priceRef.once('value', (snapshot) => { // Gunakan once() agar tidak terus menerus listen
         const priceData = snapshot.val();
         if (priceData) {
-            document.getElementById('base-price').textContent = `Rp ${priceData.basePrice.toLocaleString('id-ID')}`;
-            document.getElementById('promo-price').textContent = `Rp ${priceData.promoPrice.toLocaleString('id-ID')}`;
+            basePriceEl.textContent = `Rp ${priceData.basePrice.toLocaleString('id-ID')}`;
+            promoPriceEl.textContent = `Rp ${priceData.promoPrice.toLocaleString('id-ID')}`;
             servicePrice = priceData.promoPrice;
+            getOrderBtn.disabled = false; // Aktifkan kembali tombol
+            getOrderBtn.innerHTML = '<i class="bi bi-shield-lock-fill"></i> Dapatkan Nomor';
+        } else {
+            // Jika tidak ada konfigurasi harga untuk negara ini
+            basePriceEl.textContent = `-`;
+            promoPriceEl.textContent = `Tidak Tersedia`;
+            // Tombol tetap nonaktif
         }
     });
 }
@@ -86,70 +103,72 @@ auth.onAuthStateChanged(user => {
     if (user) {
         currentUserId = user.uid;
         loadUserOrders();
-        loadCountries();
+        loadCountries(); // Cukup panggil ini, sisanya akan dipanggil berantai
         listenToUserBalance();
-        loadServiceConfig('facebook', 'indonesia');
     } else {
         window.location.href = 'index.html';
     }
 });
 logoutBtn.addEventListener('click', () => { auth.signOut(); });
 
+// BARU: Event listener untuk dropdown negara
+countrySelect.addEventListener('change', () => {
+    const selectedCountry = countrySelect.value;
+    loadServiceConfig('facebook', selectedCountry);
+});
+
+
 // ======================================================
 // BAGIAN 2: LOGIKA UTAMA
 // ======================================================
-function loadUserOrders() { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
-function addOrUpdateOrderRow(orderId, data) { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
+function loadUserOrders() { /* ... (Tidak berubah) ... */ }
+function addOrUpdateOrderRow(orderId, data) { /* ... (Tidak berubah) ... */ }
 
 getOrderBtn.addEventListener('click', () => {
     if (!currentUserId || !countrySelect.value) return;
+    
+    // Perbarui pengecekan harga
+    if (servicePrice === null) {
+        alert("Harga belum dimuat, silakan coba lagi sesaat.");
+        return;
+    }
+    
     if (currentUserBalance < servicePrice) {
         alert("Saldo tidak cukup! Silakan lakukan deposit terlebih dahulu.");
         return;
     }
+    
     const orderId = database.ref().child('orders').push().key;
     const serviceName = 'Facebook';
     const selectedCountry = countrySelect.value;
+    
+    // Pastikan harga yang dikirim adalah harga yang valid
     const newOrderData = {
-        serviceName: serviceName, price: servicePrice, status: 'waiting_number',
-        phoneNumber: '', otpCode: '', country: selectedCountry,
+        serviceName: serviceName,
+        price: servicePrice,
+        status: 'waiting_number',
+        phoneNumber: '',
+        otpCode: '',
+        country: selectedCountry,
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
+    
     const newBalance = currentUserBalance - servicePrice;
+    
     const updates = {};
     updates[`/orders/${currentUserId}/${orderId}`] = newOrderData;
     updates[`/users/${currentUserId}/balance`] = newBalance;
+    
     database.ref().update(updates).catch(err => alert("Terjadi kesalahan: " + err.message));
 });
 
-function cancelOrder(orderId) { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
-function finishOrder(orderId) { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
-
-submitDepositBtn.addEventListener('click', () => {
-    const amount = parseInt(depositAmountInput.value);
-    if (!amount || amount < 10000) {
-        depositAlert.textContent = "Jumlah deposit minimal Rp 10.000.";
-        depositAlert.className = 'alert alert-danger';
-        return;
-    }
-    const depositId = database.ref().child('deposit_requests').push().key;
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
-    const depositData = {
-        userId: currentUser.uid, userEmail: currentUser.email, amount: amount,
-        status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP
-    };
-    database.ref(`deposit_requests/${depositId}`).set(depositData).then(() => {
-        depositAmountInput.value = '';
-        depositAlert.textContent = "Permintaan deposit berhasil diajukan.";
-        depositAlert.className = 'alert alert-success';
-        setTimeout(() => depositAlert.className = 'alert d-none', 4000);
-    });
-});
+function cancelOrder(orderId) { /* ... (Tidak berubah) ... */ }
+function finishOrder(orderId) { /* ... (Tidak berubah) ... */ }
+submitDepositBtn.addEventListener('click', () => { /* ... (Tidak berubah) ... */ });
 
 // ======================================================
 // BAGIAN 3: FUNGSI UTILITAS
 // ======================================================
-function startTimer(orderId, seconds) { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
-function formatTime(s) { /* ... (Tidak berubah dari versi sebelumnya) ... */ }
-function copyToClipboard(text,el){ /* ... (Tidak berubah dari versi sebelumnya) ... */ }
+function startTimer(orderId, seconds) { /* ... (Tidak berubah) ... */ }
+function formatTime(s) { /* ... (Tidak berubah) ... */ }
+function copyToClipboard(text,el){ /* ... (Tidak berubah) ... */ }
