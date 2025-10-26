@@ -59,6 +59,17 @@
             </div>
             <div class="card-body">
                 <p class="text-muted small">Hanya nomor dengan status "tersedia" dari sebuah range yang akan dihapus.</p>
+
+                <!-- Tombol Pembersih Stok Lama -->
+                <div class="border border-warning rounded p-3 mb-3">
+                    <h5 class="text-warning">Pembersihan Stok Lama</h5>
+                    <p class="small mb-2">Gunakan tombol ini untuk menghapus semua nomor stok lama (yang ditambahkan sebelum ada sistem range) yang masih tersedia.</p>
+                    <button class="btn btn-warning" onclick="deleteOldStock()">
+                        <i class="bi bi-eraser-fill"></i> Hapus Stok Lama Tanpa Range
+                    </button>
+                </div>
+                <!-- Akhir dari Tombol Pembersih -->
+
                 <div class="table-responsive">
                     <table class="table table-dark table-hover align-middle">
                         <thead>
