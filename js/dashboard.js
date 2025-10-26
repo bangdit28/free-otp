@@ -1,6 +1,6 @@
 // Ganti dengan konfigurasi Firebase Anda
 const firebaseConfig = {
-  apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
+      apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
   databaseURL: "https://freeotp-f99d4-default-rtdb.firebaseio.com",
   projectId: "freeotp-f99d4",
@@ -20,41 +20,103 @@ const logoutBtn = document.getElementById('logout-btn');
 const countrySelect = document.getElementById('country-select');
 const activeTimers = {};
 
-// ... (Kode Menu Mobile dan loadCountries tetap sama) ...
+// --- Logika Menu Mobile ---
 const menuToggle = document.getElementById('menu-toggle');
-// ...
-function loadCountries() { /* ... */ }
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+menuToggle.addEventListener('click', () => { document.body.classList.toggle('sidebar-open'); });
+sidebarOverlay.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); });
 
-// ... (Kode Authentication Guard tetap sama) ...
+// ======================================================
+// FUNGSI UNTUK MEMUAT NEGARA DARI FIREBASE
+// ======================================================
+function loadCountries() {
+    const countriesRef = database.ref('config/countries');
+    countriesRef.once('value', (snapshot) => {
+        const countries = snapshot.val();
+        if (countries) {
+            countrySelect.innerHTML = '';
+            for (const key in countries) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = countries[key];
+                countrySelect.appendChild(option);
+            }
+        } else {
+            countrySelect.innerHTML = '<option>Tidak ada negara</option>';
+            getOrderBtn.disabled = true;
+        }
+    });
+}
+
+// ======================================================
+// BAGIAN 1: AUTHENTICATION GUARD & SETUP
+// ======================================================
 let currentUserId = null;
-auth.onAuthStateChanged(user => { /* ... */ });
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUserId = user.uid;
+        loadUserOrders();
+        loadCountries();
+    } else {
+        window.location.href = 'index.html';
+    }
+});
 logoutBtn.addEventListener('click', () => { auth.signOut(); });
 
 // ======================================================
-// BAGIAN 2: LOGIKA UTAMA (DIPERBARUI)
+// BAGIAN 2: LOGIKA UTAMA
 // ======================================================
 
-function loadUserOrders() { /* ... (Fungsi ini tidak berubah) ... */ }
+function loadUserOrders() {
+    if (!currentUserId) return;
+    const userOrdersRef = database.ref(`orders/${currentUserId}`);
+    userOrdersRef.on('child_added', (snapshot) => {
+        const orderId = snapshot.key;
+        const orderData = snapshot.val();
+        if (orderData.status !== 'finished_by_user') {
+            addOrUpdateOrderRow(orderId, orderData);
+        }
+    });
+    userOrdersRef.on('child_changed', (snapshot) => {
+        const orderId = snapshot.key;
+        const orderData = snapshot.val();
+        if (orderData.status === 'finished_by_user') {
+            const row = document.getElementById(`order-${orderId}`);
+            if (row) row.remove();
+        } else {
+            addOrUpdateOrderRow(orderId, orderData);
+        }
+    });
+    userOrdersRef.on('child_removed', (snapshot) => {
+        const orderId = snapshot.key;
+        const row = document.getElementById(`order-${orderId}`);
+        if (row) row.remove();
+    });
+}
 
-// DIPERBARUI: Tampilan Aksi sekarang memiliki tombol Batal
 function addOrUpdateOrderRow(orderId, data) {
     let row = document.getElementById(`order-${orderId}`);
-    if (!row) { /* ... (Tidak berubah) ... */ }
-    
-    // ... (Logika phoneHTML dan otpHTML tidak berubah) ...
-    
-    // DIPERBARUI: Logika untuk tombol Aksi
-    let actionHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`; // Status default saat mencari nomor
+    if (!row) {
+        row = document.createElement('tr');
+        row.id = `order-${orderId}`;
+        activeOrdersTbody.prepend(row);
+    }
+    let phoneHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
+    if (data.status === 'out_of_stock') {
+        phoneHTML = `<span class="text-danger fw-bold">Stok Habis</span>`;
+    } else if (data.phoneNumber) {
+        phoneHTML = `${data.phoneNumber} <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.phoneNumber}', this)"></i>`;
+    }
+    let otpHTML = data.otpCode ? `<span class="otp-code">${data.otpCode}</span> <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.otpCode}', this)"></i>` : '<div class="spinner-border spinner-border-sm"></div>';
+    let actionHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
     if (data.status === 'waiting_otp' || (data.phoneNumber && !data.otpCode)) {
-        // Jika sedang menunggu OTP, tampilkan tombol Batal
         actionHTML = `<button class="btn btn-sm btn-cancel" onclick="cancelOrder('${orderId}')"><i class="bi bi-x-circle"></i> Batal</button>`;
     } else if (data.otpCode) {
-        // Jika OTP sudah ada, tampilkan tombol Selesai
         actionHTML = `<button class="btn btn-sm btn-success action-btn" onclick="finishOrder('${orderId}')"><i class="bi bi-check-lg"></i> Selesai</button>`;
     } else if (data.status === 'out_of_stock') {
         actionHTML = `<i class="bi bi-x-circle-fill text-danger"></i>`;
     }
-    
     row.innerHTML = `
         <td>${data.serviceName}</td>
         <td class="phone-cell">${phoneHTML}</td>
@@ -62,52 +124,79 @@ function addOrUpdateOrderRow(orderId, data) {
         <td class="timer-cell">--:--</td>
         <td class="status-cell">${actionHTML}</td>
     `;
-
-    // ... (Logika Timer tidak berubah) ...
+    const createdAt = data.createdAt || Date.now();
+    const timeElapsed = (Date.now() - createdAt) / 1000;
+    const remainingSeconds = Math.round(600 - timeElapsed);
+    if (remainingSeconds > 0) {
+        startTimer(orderId, remainingSeconds);
+    } else {
+        const timerCell = row.querySelector('.timer-cell');
+        timerCell.textContent = "Expired";
+        if (data.status !== 'finished_by_user') {
+            setTimeout(() => { if (document.getElementById(`order-${orderId}`)) { document.getElementById(`order-${orderId}`).remove(); } }, 3000);
+        }
+    }
 }
 
-// ... (Fungsi getOrderBtn click listener tidak berubah) ...
+getOrderBtn.addEventListener('click', () => {
+    if (!currentUserId || !countrySelect.value) return;
+    const orderId = database.ref().child('orders').push().key;
+    const serviceName = 'Facebook';
+    const selectedCountry = countrySelect.value;
+    const newOrderData = {
+        serviceName: serviceName, price: 1500, status: 'waiting_number',
+        phoneNumber: '', otpCode: '', country: selectedCountry,
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+    };
+    database.ref(`orders/${currentUserId}/${orderId}`).set(newOrderData);
+});
 
-// BARU: Fungsi untuk membatalkan pesanan
 function cancelOrder(orderId) {
     if (!currentUserId) return;
-
+    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini? Nomor akan hangus.")) { return; }
     const orderRef = database.ref(`orders/${currentUserId}/${orderId}`);
-    
-    // Konfirmasi dulu agar pengguna tidak salah klik
-    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini? Nomor akan hangus.")) {
-        return;
-    }
-
     orderRef.once('value', (snapshot) => {
         const orderData = snapshot.val();
-        // Cek apakah pesanan masih ada dan memiliki jejak stok
         if (orderData && orderData.stockId) {
             const updates = {};
             const { stockService, stockCountry, stockId } = orderData;
-            
-            // 1. Kembalikan nomor ke stok
             updates[`/number_stock/${stockService}/${stockCountry}/${stockId}/status`] = 'available';
-            // Hapus referensi orderId dari stok
             updates[`/number_stock/${stockService}/${stockCountry}/${stockId}/orderId`] = null;
-
-            // 2. Hapus pesanan
             updates[`/orders/${currentUserId}/${orderId}`] = null;
-
             database.ref().update(updates);
-
-            // Hentikan timer terkait pesanan ini
             if (activeTimers[orderId]) {
                 clearInterval(activeTimers[orderId]);
                 delete activeTimers[orderId];
             }
         } else {
-            // Jika tidak ada jejak, hapus saja pesanannya
             orderRef.remove();
         }
     });
 }
 
-function finishOrder(orderId) { /* ... (Fungsi ini tidak berubah) ... */ }
+function finishOrder(orderId) {
+    if (!currentUserId) return;
+    database.ref(`orders/${currentUserId}/${orderId}`).update({ status: 'finished_by_user' });
+}
 
-// ... (Fungsi Utilitas: startTimer, formatTime, copyToClipboard tidak berubah) ...
+// ======================================================
+// BAGIAN 3: FUNGSI UTILITAS
+// ======================================================
+function startTimer(orderId, seconds) {
+    if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
+    const timerCell = document.querySelector(`#order-${orderId} .timer-cell`);
+    if (!timerCell) return;
+    let remaining = seconds;
+    timerCell.textContent = formatTime(remaining);
+    activeTimers[orderId] = setInterval(() => {
+        remaining--;
+        timerCell.textContent = formatTime(remaining);
+        if (remaining <= 0) {
+            clearInterval(activeTimers[orderId]);
+            timerCell.textContent = "Expired";
+            setTimeout(() => { const row = document.getElementById(`order-${orderId}`); if (row) row.remove(); }, 3000);
+        }
+    }, 1000);
+}
+function formatTime(s) { const m=Math.floor(s/60); return `${m}:${(s%60)<10?'0':''}${s%60}`; }
+function copyToClipboard(text,el){navigator.clipboard.writeText(text).then(()=>{const i=el.className;el.className='bi bi-check-lg text-success';setTimeout(()=>el.className=i,1500)})}
