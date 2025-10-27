@@ -1,3 +1,4 @@
+// Ganti dengan konfigurasi Firebase Anda
 const firebaseConfig = {
     apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
@@ -67,7 +68,6 @@ addStockBtn.addEventListener('click', () => {
     const country = countrySelect.value;
     const rangeName = rangeNameInput.value.trim();
     const numbersRaw = numberTextarea.value.trim();
-
     if (!rangeName) {
         showFeedback("Nama Range tidak boleh kosong.", true);
         return;
@@ -80,20 +80,16 @@ addStockBtn.addEventListener('click', () => {
         showFeedback("Negara belum dipilih.", true);
         return;
     }
-
     const numbers = numbersRaw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
     if (numbers.length > 100) {
         showFeedback('Maksimal 100 nomor sekali tambah.', true);
         return;
     }
-
     addStockBtn.disabled = true;
     addStockBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
     const stockPath = numberStockRef.child(service).child(country);
     let successCount = 0;
     const totalNumbers = numbers.length;
-
     numbers.forEach(number => {
         const newStockEntry = {
             number: number,
@@ -118,7 +114,6 @@ function updateStockCount() {
     const service = serviceSelect.value;
     const country = countrySelect.value;
     if (!service || !country) return;
-
     const stockPath = numberStockRef.child(service).child(country);
     stockPath.orderByChild('status').equalTo('available').on('value', (snapshot) => {
         stockCountDisplay.textContent = `${snapshot.numChildren()} nomor`;
@@ -129,7 +124,6 @@ function listenToRanges() {
     const service = serviceSelect.value;
     const country = countrySelect.value;
     if (!service || !country) return;
-
     const stockPath = numberStockRef.child(service).child(country);
     stockPath.on('value', (snapshot) => {
         rangeListTbody.innerHTML = '<tr><td colspan="4" class="text-center">Memuat data range...</td></tr>';
@@ -138,7 +132,6 @@ function listenToRanges() {
             rangeListTbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada range untuk kombinasi ini.</td></tr>';
             return;
         }
-
         const aggregatedRanges = {};
         for (const stockId in numbers) {
             const numberData = numbers[stockId];
@@ -154,13 +147,11 @@ function listenToRanges() {
                 aggregatedRanges[numberData.rangeName].available++;
             }
         }
-
         rangeListTbody.innerHTML = '';
         if (Object.keys(aggregatedRanges).length === 0) {
             rangeListTbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada range untuk kombinasi ini.</td></tr>';
             return;
         }
-
         for (const rangeName in aggregatedRanges) {
             const rangeData = aggregatedRanges[rangeName];
             const row = document.createElement('tr');
@@ -181,14 +172,12 @@ function listenToRanges() {
 
 function deleteRange(service, country, rangeName) {
     if (!confirm(`Anda yakin ingin menghapus semua nomor yang TERSEDIA dari range "${rangeName}"?`)) return;
-
     const stockPath = numberStockRef.child(service).child(country);
     stockPath.orderByChild('rangeName').equalTo(rangeName).once('value', (snapshot) => {
         if (!snapshot.exists()) {
             alert("Range tidak ditemukan.");
             return;
         }
-
         const updates = {};
         let deletedCount = 0;
         snapshot.forEach((childSnapshot) => {
@@ -199,7 +188,6 @@ function deleteRange(service, country, rangeName) {
                 deletedCount++;
             }
         });
-
         if (deletedCount > 0) {
             stockPath.update(updates).then(() => {
                 alert(`Berhasil menghapus ${deletedCount} nomor dari range "${rangeName}".`);
@@ -210,7 +198,6 @@ function deleteRange(service, country, rangeName) {
     });
 }
 
-// FUNGSI BARU UNTUK MEMBERSIHKAN STOK LAMA
 function deleteOldStock() {
     const service = serviceSelect.value;
     const country = countrySelect.value;
@@ -219,26 +206,22 @@ function deleteOldStock() {
         return;
     }
     if (!confirm(`Anda yakin ingin menghapus SEMUA nomor stok lama (tanpa range) yang TERSEDIA untuk ${service} - ${country}?`)) return;
-
     const stockPath = numberStockRef.child(service).child(country);
     stockPath.once('value', (snapshot) => {
         if (!snapshot.exists()) {
             alert("Tidak ada stok untuk kombinasi ini.");
             return;
         }
-
         const updates = {};
         let deletedCount = 0;
         snapshot.forEach((childSnapshot) => {
             const stockId = childSnapshot.key;
             const stockData = childSnapshot.val();
-
             if (!stockData.hasOwnProperty('rangeName') && stockData.status === 'available') {
                 updates[stockId] = null;
                 deletedCount++;
             }
         });
-
         if (deletedCount > 0) {
             stockPath.update(updates).then(() => {
                 alert(`Pembersihan berhasil! ${deletedCount} nomor stok lama telah dihapus.`);
@@ -327,21 +310,28 @@ function attachListenersToUser(userId) {
     userOrdersRef.on('child_added', (orderSnapshot) => {
         const orderId = orderSnapshot.key;
         const order = orderSnapshot.val();
-        if (order.status === 'waiting_number' && !document.getElementById(`order-${orderId}`)) {
+        const activeStatuses = ['waiting_number', 'waiting_otp'];
+        if (activeStatuses.includes(order.status) && !document.getElementById(`order-${orderId}`)) {
             checkAndSetPlaceholder();
+            if (order.status === 'waiting_number') {
+                assignNumberToOrder(userId, orderId, order.serviceName.toLowerCase(), order.country);
+            }
             const row = document.createElement('tr');
             row.id = `order-${orderId}`;
+            let phoneHTML = `<span class="text-warning">Mencari...</span>`;
+            if (order.status === 'waiting_otp' && order.phoneNumber) {
+                phoneHTML = `<strong>${order.phoneNumber}</strong>`;
+            }
             row.innerHTML = `
                 <td>${orderId.substring(0, 8)}...</td>
                 <td>${order.serviceName} (${order.country})</td>
-                <td class="phone-cell"><span class="text-warning">Mencari...</span></td>
+                <td class="phone-cell">${phoneHTML}</td>
                 <td><input type="text" class="form-control otp-input" placeholder="Masukkan OTP"></td>
                 <td>
                     <button class="btn btn-success btn-send-otp" data-user-id="${userId}" data-order-id="${orderId}" onclick="sendOtp(this)">Kirim</button>
                 </td>
             `;
             tableBody.appendChild(row);
-            assignNumberToOrder(userId, orderId, order.serviceName.toLowerCase(), order.country);
         }
     });
     userOrdersRef.on('child_changed', (orderSnapshot) => {
@@ -363,6 +353,14 @@ function attachListenersToUser(userId) {
             phoneCell.innerHTML = '<strong><span class="text-danger">STOK HABIS!</span></strong>';
         } else if (order.phoneNumber) {
             phoneCell.innerHTML = `<strong>${order.phoneNumber}</strong>`;
+        }
+    });
+    userOrdersRef.on('child_removed', (orderSnapshot) => {
+        const orderId = orderSnapshot.key;
+        const row = document.getElementById(`order-${orderId}`);
+        if (row) {
+            row.remove();
+            checkAndSetPlaceholder();
         }
     });
 }
