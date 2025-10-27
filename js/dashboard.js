@@ -1,12 +1,15 @@
 // Ganti dengan konfigurasi Firebase Anda
 const firebaseConfig = {
-    apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
+    const firebaseConfig = {
+  apiKey: "AIzaSyC8iKBFA9rZBnXqSmN8sxSSJ-HlazvM_rM",
   authDomain: "freeotp-f99d4.firebaseapp.com",
   databaseURL: "https://freeotp-f99d4-default-rtdb.firebaseio.com",
   projectId: "freeotp-f99d4",
   storageBucket: "freeotp-f99d4.firebasestorage.app",
   messagingSenderId: "236669593071",
   appId: "1:236669593071:web:fe780ee2580df4aeea021a"
+};
+
 };
 
 firebase.initializeApp(firebaseConfig);
