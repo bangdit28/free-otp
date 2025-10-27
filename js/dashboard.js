@@ -27,7 +27,7 @@ const activeTimers = {};
 // --- Variabel Global ---
 let currentUserId = null;
 let currentUserBalance = 0;
-const SERVICE_PRICE = 1500; // HARGA TETAP UNTUK STABILITAS
+const SERVICE_PRICE = 1500;
 
 // --- Logika Menu Mobile ---
 const menuToggle = document.getElementById('menu-toggle');
@@ -43,7 +43,6 @@ sidebarOverlay.addEventListener('click', () => {
 // ======================================================
 // FUNGSI MEMUAT KONFIGURASI (HANYA NEGARA)
 // ======================================================
-
 function loadCountries() {
     const countriesRef = database.ref('config/countries');
     countriesRef.once('value', (snapshot) => {
@@ -76,7 +75,6 @@ function listenToUserBalance() {
 // ======================================================
 // BAGIAN 1: AUTHENTICATION GUARD & SETUP
 // ======================================================
-
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUserId = user.uid;
@@ -95,11 +93,9 @@ logoutBtn.addEventListener('click', () => {
 // ======================================================
 // BAGIAN 2: LOGIKA UTAMA
 // ======================================================
-
 function loadUserOrders() {
     if (!currentUserId) return;
     const userOrdersRef = database.ref(`orders/${currentUserId}`);
-
     userOrdersRef.on('child_added', (snapshot) => {
         const orderId = snapshot.key;
         const orderData = snapshot.val();
@@ -107,7 +103,6 @@ function loadUserOrders() {
             addOrUpdateOrderRow(orderId, orderData);
         }
     });
-
     userOrdersRef.on('child_changed', (snapshot) => {
         const orderId = snapshot.key;
         const orderData = snapshot.val();
@@ -118,7 +113,6 @@ function loadUserOrders() {
             addOrUpdateOrderRow(orderId, orderData);
         }
     });
-
     userOrdersRef.on('child_removed', (snapshot) => {
         const orderId = snapshot.key;
         const row = document.getElementById(`order-${orderId}`);
@@ -133,16 +127,13 @@ function addOrUpdateOrderRow(orderId, data) {
         row.id = `order-${orderId}`;
         activeOrdersTbody.prepend(row);
     }
-
     let phoneHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
     if (data.status === 'out_of_stock') {
         phoneHTML = `<span class="text-danger fw-bold">Stok Habis</span>`;
     } else if (data.phoneNumber) {
         phoneHTML = `${data.phoneNumber} <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.phoneNumber}', this)"></i>`;
     }
-
     let otpHTML = data.otpCode ? `<span class="otp-code">${data.otpCode}</span> <i class="bi bi-clipboard copy-icon" onclick="copyToClipboard('${data.otpCode}', this)"></i>` : '<div class="spinner-border spinner-border-sm"></div>';
-
     let actionHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
     if (data.status === 'waiting_otp' || (data.phoneNumber && !data.otpCode)) {
         actionHTML = `<button class="btn btn-sm btn-cancel" onclick="cancelOrder('${orderId}')"><i class="bi bi-x-circle"></i> Batal</button>`;
@@ -151,7 +142,6 @@ function addOrUpdateOrderRow(orderId, data) {
     } else if (data.status === 'out_of_stock') {
         actionHTML = `<i class="bi bi-x-circle-fill text-danger"></i>`;
     }
-
     row.innerHTML = `
         <td>${data.serviceName}</td>
         <td class="phone-cell">${phoneHTML}</td>
@@ -159,11 +149,9 @@ function addOrUpdateOrderRow(orderId, data) {
         <td class="timer-cell">--:--</td>
         <td class="status-cell">${actionHTML}</td>
     `;
-
     const createdAt = data.createdAt || Date.now();
     const timeElapsed = (Date.now() - createdAt) / 1000;
     const remainingSeconds = Math.round(600 - timeElapsed);
-
     if (remainingSeconds > 0) {
         startTimer(orderId, remainingSeconds);
     } else {
@@ -182,16 +170,13 @@ function addOrUpdateOrderRow(orderId, data) {
 
 getOrderBtn.addEventListener('click', () => {
     if (!currentUserId || !countrySelect.value) return;
-
     if (currentUserBalance < SERVICE_PRICE) {
         alert("Saldo tidak cukup! Silakan lakukan deposit terlebih dahulu.");
         return;
     }
-
     const orderId = database.ref().child('orders').push().key;
     const serviceName = 'Facebook';
     const selectedCountry = countrySelect.value;
-
     const newOrderData = {
         serviceName: serviceName,
         price: SERVICE_PRICE,
@@ -201,22 +186,18 @@ getOrderBtn.addEventListener('click', () => {
         country: selectedCountry,
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
-
     const newBalance = currentUserBalance - SERVICE_PRICE;
-
     const updates = {};
     updates[`/orders/${currentUserId}/${orderId}`] = newOrderData;
     updates[`/users/${currentUserId}/balance`] = newBalance;
-
     database.ref().update(updates).catch(err => alert("Terjadi kesalahan: " + err.message));
 });
 
 function cancelOrder(orderId) {
     if (!currentUserId) return;
-    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini? Saldo akan dikembalikan.")) {
+    if (!confirm("Anda yakin ingin membatalkan pesanan ini? Nomor akan hangus dan saldo TIDAK dikembalikan.")) {
         return;
     }
-
     const orderRef = database.ref(`orders/${currentUserId}/${orderId}`);
     orderRef.once('value', (snapshot) => {
         const orderData = snapshot.val();
@@ -225,17 +206,12 @@ function cancelOrder(orderId) {
             const {
                 stockService,
                 stockCountry,
-                stockId,
-                price
+                stockId
             } = orderData;
-
-            updates[`/number_stock/${stockService}/${stockCountry}/${stockId}/status`] = 'available';
+            updates[`/number_stock/${stockService}/${stockCountry}/${stockId}/status`] = 'canceled';
             updates[`/number_stock/${stockService}/${stockCountry}/${stockId}/orderId`] = null;
             updates[`/orders/${currentUserId}/${orderId}`] = null;
-            updates[`/users/${currentUserId}/balance`] = currentUserBalance + price;
-
             database.ref().update(updates);
-
             if (activeTimers[orderId]) {
                 clearInterval(activeTimers[orderId]);
                 delete activeTimers[orderId];
@@ -260,11 +236,9 @@ submitDepositBtn.addEventListener('click', () => {
         depositAlert.className = 'alert alert-danger';
         return;
     }
-
     const depositId = database.ref().child('deposit_requests').push().key;
     const currentUser = auth.currentUser;
     if (!currentUser) return;
-
     const depositData = {
         userId: currentUser.uid,
         userEmail: currentUser.email,
@@ -272,7 +246,6 @@ submitDepositBtn.addEventListener('click', () => {
         status: 'pending',
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
-
     database.ref(`deposit_requests/${depositId}`).set(depositData).then(() => {
         depositAmountInput.value = '';
         depositAlert.textContent = "Permintaan deposit berhasil diajukan.";
@@ -287,15 +260,12 @@ submitDepositBtn.addEventListener('click', () => {
 // ======================================================
 // BAGIAN 3: FUNGSI UTILITAS
 // ======================================================
-
 function startTimer(orderId, seconds) {
     if (activeTimers[orderId]) clearInterval(activeTimers[orderId]);
     const timerCell = document.querySelector(`#order-${orderId} .timer-cell`);
     if (!timerCell) return;
-
     let remaining = seconds;
     timerCell.textContent = formatTime(remaining);
-
     activeTimers[orderId] = setInterval(() => {
         remaining--;
         timerCell.textContent = formatTime(remaining);
