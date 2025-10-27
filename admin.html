@@ -10,43 +10,18 @@
 </head>
 <body>
     <nav class="navbar navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">Admin Panel</a>
-        </div>
+        <div class="container"><a class="navbar-brand" href="#">Admin Panel</a></div>
     </nav>
     <main class="container mt-4">
-        <!-- Panel Manajemen Stok -->
         <div class="card bg-dark border-secondary mb-4">
             <div class="card-header"><h4 class="mb-0">Manajemen Stok Nomor</h4></div>
             <div class="card-body">
                 <div class="row align-items-end gy-3">
-                    <div class="col-md-3 col-lg-2">
-                        <label for="service-select" class="form-label">Layanan</label>
-                        <select id="service-select" class="form-select">
-                            <option value="facebook">Facebook</option>
-                            <option value="google">Google</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 col-lg-2">
-                        <label for="country-select" class="form-label">Negara</label>
-                        <div class="input-group">
-                            <select id="country-select" class="form-select"></select>
-                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#countryManagerModal" title="Kelola Negara">
-                                <i class="bi bi-gear-fill"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="range-name-input" class="form-label">Nama Range</label>
-                        <input type="text" id="range-name-input" class="form-control" placeholder="Contoh: ETHIOPIA 1621">
-                    </div>
-                    <div class="col-md-3">
-                        <label for="number-textarea" class="form-label">Daftar Nomor</label>
-                        <textarea id="number-textarea" class="form-control" rows="3" placeholder="Satu nomor per baris..."></textarea>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <button id="add-stock-btn" class="btn btn-primary w-100">Tambah</button>
-                    </div>
+                    <div class="col-md-2"><label for="service-select" class="form-label">Layanan</label><select id="service-select" class="form-select"><option value="facebook">Facebook</option><option value="google">Google</option></select></div>
+                    <div class="col-md-2"><label for="country-select" class="form-label">Negara</label><select id="country-select" class="form-select"></select></div>
+                    <div class="col-md-3"><label for="range-name-input" class="form-label">Nama Range</label><input type="text" id="range-name-input" class="form-control" placeholder="Contoh: ETHIOPIA 1621"></div>
+                    <div class="col-md-3"><label for="number-textarea" class="form-label">Daftar Nomor</label><textarea id="number-textarea" class="form-control" rows="3" placeholder="Satu nomor per baris..."></textarea></div>
+                    <div class="col-md-2"><button id="add-stock-btn" class="btn btn-primary w-100">Tambah</button></div>
                 </div>
                 <hr class="my-3">
                 <div id="feedback-message" class="mb-2"></div>
@@ -54,82 +29,44 @@
                 <span id="stock-count-display" class="badge bg-success fs-6">Pilih layanan & negara</span>
             </div>
         </div>
-
-        <!-- Panel Daftar Range Aktif -->
         <div class="card bg-dark border-secondary mb-4">
             <div class="card-header"><h4 class="mb-0">Daftar Range Aktif</h4></div>
             <div class="card-body">
-                <p class="text-muted small">Hanya nomor dengan status "tersedia" dari sebuah range yang akan dihapus.</p>
+                <p class="text-muted small">Hanya nomor "tersedia" dari sebuah range yang akan dihapus.</p>
                 <div class="border border-warning rounded p-3 mb-3">
                     <h5 class="text-warning">Pembersihan Stok Lama</h5>
-                    <p class="small mb-2">Gunakan tombol ini untuk menghapus semua nomor stok lama (tanpa range) yang masih tersedia.</p>
+                    <p class="small mb-2">Gunakan untuk menghapus stok lama (tanpa range) yang masih tersedia.</p>
                     <button class="btn btn-warning" onclick="deleteOldStock()"><i class="bi bi-eraser-fill"></i> Hapus Stok Lama</button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-dark table-hover align-middle">
-                        <thead>
-                            <tr><th>Nama Range</th><th>Tersedia</th><th>Total</th><th>Aksi</th></tr>
-                        </thead>
+                        <thead><tr><th>Nama Range</th><th>Tersedia</th><th>Total</th><th>Aksi</th></tr></thead>
                         <tbody id="range-list-tbody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <!-- Panel Permintaan Deposit -->
         <div class="card bg-dark border-secondary mb-4">
             <div class="card-header"><h4 class="mb-0">Permintaan Deposit Tertunda</h4></div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-dark table-hover align-middle">
-                        <thead>
-                            <tr><th>Email Pengguna</th><th>Jumlah</th><th>Tanggal</th><th>Aksi</th></tr>
-                        </thead>
+                        <thead><tr><th>Email Pengguna</th><th>Jumlah</th><th>Tanggal</th><th>Aksi</th></tr></thead>
                         <tbody id="deposit-requests-tbody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <!-- Panel Pesanan Aktif -->
         <h2 class="mb-3">Pesanan Aktif</h2>
         <div class="table-responsive">
             <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr><th>Order ID</th><th>Layanan</th><th>Nomor Telepon</th><th>Input Kode OTP</th><th>Aksi</th></tr>
-                </thead>
+                <thead><tr><th>Order ID</th><th>Layanan</th><th>Nomor Telepon</th><th>Input Kode OTP</th><th>Aksi</th></tr></thead>
                 <tbody id="orders-table-body"></tbody>
             </table>
         </div>
     </main>
-
-    <!-- Modal Manajemen Negara -->
-    <div class="modal fade" id="countryManagerModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="background-color: #1C1C1E; color: white;">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title">Kelola Negara</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <h6>Daftar Negara Saat Ini</h6>
-                    <ul id="country-list-ul" class="list-group mb-4"></ul>
-                    <h6>Tambah Negara Baru</h6>
-                    <div class="input-group">
-                        <input type="text" id="new-country-name" class="form-control" placeholder="Nama Negara (Contoh: Vietnam)">
-                        <button class="btn btn-primary" type="button" id="add-country-btn">Tambah</button>
-                    </div>
-                    <div id="country-feedback" class="form-text mt-2"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <!-- Bootstrap JS (PENTING untuk Modal) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/admin.js"></script>
 </body>
 </html>
